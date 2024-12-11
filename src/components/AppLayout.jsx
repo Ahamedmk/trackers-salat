@@ -60,6 +60,13 @@ function AppLayout({ children }) {
               <ListItemText primary="Invocations" />
               </ListItemButton>
             </ListItem>
+
+            <ListItem>
+            <ListItemButton component={RouterLink} to="/profils">
+              <ListItemText primary="Profils" />
+              </ListItemButton>
+            </ListItem>
+
             <ListItem>
             <ListItemButton component={RouterLink} to="/statistics">
               <ListItemText primary="Statistiques" />

@@ -10,6 +10,7 @@ import InvocationsPage from './pages/InvocationsPage';
 import StatisticsPage from './pages/StatisticsPage';
 import PrivateRoute from './components/PrivateRoute';
 import AppLayout from './components/AppLayout';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -48,6 +49,14 @@ function App() {
             element={
               <PrivateRoute>
                 <StatisticsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profils"
+            element={
+              <PrivateRoute>
+                <ProfilePage />
               </PrivateRoute>
             }
           />
