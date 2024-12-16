@@ -169,7 +169,7 @@ function ProfilePage() {
         <gap-2 container spacing={2}>
           {badgesEarned.map((badge) => (
             <Grid2 xs={12} sm={6} md={4} key={badge.id}>
-              <Paper sx={{ p: 2, textAlign: 'center' }}>
+              <Paper sx={{ p: 2, textAlign: 'center'}}>
                 <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                   {badge.name}
                 </Typography>

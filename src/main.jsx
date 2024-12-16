@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { ThemeProvider } from './context/ThemeContext'; // Notre contexte de theme
 import CssBaseline from '@mui/material/CssBaseline';
+import theme from './theme';
 
 function MyApp() {
   return (

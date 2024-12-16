@@ -1,4 +1,5 @@
 // src/pages/PrayersPage.js
+
 import React, { useState, useContext, useEffect } from 'react';
 import { db } from '../firebase';
 import { AuthContext } from '../context/AuthContext';
@@ -14,11 +15,24 @@ import {
   MenuItem,
   TextField,
   Dialog,
+  Snackbar,
+  Alert,
   DialogTitle,
   DialogActions,
   DialogContent
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Tableau de messages d’encouragement
+const encouragementMessages = [
+  "Bravo ! Continue ainsi !",
+  "Excellente régularité, machaAllah !",
+  "Tu es sur la bonne voie, ne lâche pas !",
+  "MashaAllah, ta persévérance est inspirante !",
+  "Félicitations, garde cette motivation !",
+  "Courage, tu es en train de progresser !",
+  "Qu’Allah te facilite davantage !",
+];
 
 function PrayersPage() {
   const { currentUser } = useContext(AuthContext);
@@ -29,16 +43,21 @@ function PrayersPage() {
   const [onTimeStatus, setOnTimeStatus] = useState('on-time');
   const [prayers, setPrayers] = useState([]);
 
-  // Etats pour gérer le pop-up "déjà validé"
+  // États pour le pop-up "déjà validé"
   const [alreadyValidatedOpen, setAlreadyValidatedOpen] = useState(false);
 
-  // Etats pour la modification d'une prière
+  // États pour la modification d'une prière
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [prayerToEdit, setPrayerToEdit] = useState(null);
   const [editPrayerType, setEditPrayerType] = useState('Fajr');
   const [editLocation, setEditLocation] = useState('maison');
   const [editNote, setEditNote] = useState('');
   const [editOnTimeStatus, setEditOnTimeStatus] = useState('on-time');
+
+  // États pour le Snackbar
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   // Filtre pour obtenir uniquement les prières du jour
   const filterTodayPrayers = (allPrayers) => {
@@ -97,10 +116,27 @@ function PrayersPage() {
     });
 
     setNote('');
+
+    // Si en retard => message d’avertissement
+    if (onTimeStatus === 'late') {
+      setSnackbarMessage("Tu es en retard, fais attention la prochaine fois !");
+      setSnackbarSeverity("warning");
+    } else {
+      // message d’encouragement aléatoire
+      const randomIndex = Math.floor(Math.random() * encouragementMessages.length);
+      setSnackbarMessage(encouragementMessages[randomIndex]);
+      setSnackbarSeverity("success");
+    }
+    setSnackbarOpen(true);
   };
 
   const handleCloseAlreadyValidated = () => {
     setAlreadyValidatedOpen(false);
+  };
+
+  // Fermer le Snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   const handleDeletePrayer = async (prayerId) => {
@@ -147,7 +183,11 @@ function PrayersPage() {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <Paper sx={{ p: 4 }} elevation={3}>
         <Typography variant="h5" gutterBottom>Ajouter une Prière</Typography>
-        <Box component="form" onSubmit={handleAddPrayer} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400 }}>
+        <Box
+          component="form"
+          onSubmit={handleAddPrayer}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400 }}
+        >
           <FormControl fullWidth>
             <InputLabel>Type de prière</InputLabel>
             <Select value={prayerType} label="Type de prière" onChange={(e) => setPrayerType(e.target.value)}>
@@ -217,7 +257,7 @@ function PrayersPage() {
         )}
       </Paper>
 
-      {/* Dialog pour "déjà validé" */}
+      {/* Popup "Déjà validé" */}
       <Dialog open={alreadyValidatedOpen} onClose={handleCloseAlreadyValidated}>
         <DialogTitle>Déjà Validé</DialogTitle>
         <DialogContent>
@@ -271,6 +311,23 @@ function PrayersPage() {
           <Button variant="contained" color="primary" onClick={handleEditPrayerSave}>Enregistrer</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar (au milieu de l'écran) */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ top: '40%!important' }} // Descendre la snackbar ~ au milieu
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

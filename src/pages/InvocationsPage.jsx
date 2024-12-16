@@ -164,7 +164,7 @@ function InvocationsPage() {
           <Grid2 container spacing={2}>
             {usageList.map((usage) => (
               <Grid2 xs={12} sm={6} md={4} key={usage.uid}>
-                <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                     {usage.text}
                   </Typography>
