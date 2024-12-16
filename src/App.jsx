@@ -11,6 +11,7 @@ import StatisticsPage from './pages/StatisticsPage';
 import PrivateRoute from './components/PrivateRoute';
 import AppLayout from './components/AppLayout';
 import ProfilePage from './pages/ProfilePage';
+import ParametresPage from './pages/ParametresPage';
 
 function App() {
   return (
@@ -57,6 +58,14 @@ function App() {
             element={
               <PrivateRoute>
                 <ProfilePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/parametres"
+            element={
+              <PrivateRoute>
+                <ParametresPage />
               </PrivateRoute>
             }
           />

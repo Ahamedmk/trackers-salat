@@ -1,143 +1,187 @@
-// src/pages/ProfilePage.js
+// src/pages/ProfilePage.jsx
 
-import React, { useContext, useState, useEffect } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import { db } from '../firebase';
-import { ref, onValue } from 'firebase/database';
+import { useContext, useState, useEffect } from 'react';
+import Grid2 from '@mui/material/Grid2'; // Import de Grid2
 import {
   Box,
   Typography,
   Paper,
-  Grid
+  Container,
+  Avatar,
+  Button,
+  CircularProgress,
+  IconButton,
 } from '@mui/material';
+import { PhotoCamera } from '@mui/icons-material';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as dbRef, onValue, set } from 'firebase/database';
+import { db, storage } from '../firebase';
+import { AuthContext } from '../context/AuthContext';
+
+// On suppose que vous utilisez la même logique de badges que dans StatistiquesPage
 import { badges } from '../constants/badges';
+
+// Optionnel : fonction pour calculer les badges, identique à StatistiquesPage
+function calculateEarnedBadges(totalPrayers, totalInvocations) {
+  return badges.filter((badge) => 
+    totalPrayers >= badge.criteria.prayers && 
+    totalInvocations >= badge.criteria.invocations
+  );
+}
 
 function ProfilePage() {
   const { currentUser } = useContext(AuthContext);
+
+  const [profilePhoto, setProfilePhoto] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
   const [prayers, setPrayers] = useState([]);
   const [invocations, setInvocations] = useState([]);
+  const [badgesEarned, setBadgesEarned] = useState([]);
 
-  // Fonction pour filtrer les prières du jour
-  const filterPrayers = (allPrayers) => {
-    // Vous pouvez ajuster ce filtre selon vos besoins
-    return allPrayers;
-  };
-
-  // Récupérer les prières depuis Firebase
-  const fetchPrayers = () => {
+  useEffect(() => {
     if (!currentUser) return;
-    const prayersRef = ref(db, `users/${currentUser.uid}/prayers`);
+
+    // 1) Charger la photo depuis localStorage si dispo
+    const storedPhoto = localStorage.getItem('profilePhoto');
+    if (storedPhoto) {
+      setProfilePhoto(storedPhoto);
+    }
+
+    // 2) Charger la photo depuis la DB (écrase potentiellement la version localStorage si plus récent)
+    const photoRef = dbRef(db, `users/${currentUser.uid}/profilePhoto`);
+    onValue(photoRef, (snapshot) => {
+      const url = snapshot.val();
+      if (url) {
+        setProfilePhoto(url);
+        localStorage.setItem('profilePhoto', url); // synchronise localStorage
+      }
+    });
+
+    // 3) Charger les prières
+    const prayersRef = dbRef(db, `users/${currentUser.uid}/prayers`);
     onValue(prayersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const allPrayers = Object.entries(data).map(([id, value]) => ({
-          id,
-          ...value
-        }));
-        const filteredPrayers = filterPrayers(allPrayers);
-        setPrayers(filteredPrayers);
+        const allPrayers = Object.entries(data).map(([id, value]) => ({ id, ...value }));
+        setPrayers(allPrayers);
       } else {
         setPrayers([]);
       }
     });
-  };
 
-  // Récupérer les invocations depuis Firebase
-  const fetchInvocations = () => {
-    if (!currentUser) return;
-    const invocationsRef = ref(db, `users/${currentUser.uid}/invocations`);
-    onValue(invocationsRef, (snapshot) => {
+    // 4) Charger les invocations
+    const invRef = dbRef(db, `users/${currentUser.uid}/invocations`);
+    onValue(invRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const allInvocations = Object.entries(data).map(([id, value]) => ({
-          id,
-          ...value
-        }));
-        setInvocations(allInvocations);
+        const allInv = Object.entries(data).map(([id, value]) => ({ id, ...value }));
+        setInvocations(allInv);
       } else {
         setInvocations([]);
       }
     });
-  };
-
-  useEffect(() => {
-    fetchPrayers();
-    fetchInvocations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-  // Calcul total des invocations
-  const totalInvocations = invocations.reduce((acc, inv) => acc + inv.count, 0);
-  const totalPrayersCount = prayers.length;
+  // Calculer les stats
+  const totalPrayers = prayers.length;
+  const totalInvocations = invocations.reduce((acc, inv) => acc + (inv.count || 0), 0);
 
-  // Fonction pour calculer les badges gagnés
-  const calculateEarnedBadges = (totalPrayers, totalInvocations) => {
-    return badges.filter(badge => 
-      totalPrayers >= badge.criteria.prayers && 
-      totalInvocations >= badge.criteria.invocations
-    );
+  useEffect(() => {
+    // Calcul des badges gagnés identique à StatisticsPage
+    const earned = calculateEarnedBadges(totalPrayers, totalInvocations);
+    setBadgesEarned(earned);
+  }, [totalPrayers, totalInvocations]);
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
   };
 
-  const earnedBadges = calculateEarnedBadges(totalPrayersCount, totalInvocations);
+  const handlePhotoUpload = async () => {
+    if (!selectedFile || !currentUser) return;
+    setUploading(true);
+
+    try {
+      const fileRef = storageRef(storage, `profilePhotos/${currentUser.uid}`);
+      await uploadBytes(fileRef, selectedFile);
+      const downloadURL = await getDownloadURL(fileRef);
+
+      // Mettre à jour la DB
+      const userRef = dbRef(db, `users/${currentUser.uid}/profilePhoto`);
+      await set(userRef, downloadURL);
+
+      // Mettre à jour localStorage
+      localStorage.setItem('profilePhoto', downloadURL);
+
+      setProfilePhoto(downloadURL);
+      setSelectedFile(null);
+    } catch (error) {
+      console.error('Erreur upload photo profil :', error);
+    }
+    setUploading(false);
+  };
 
   return (
-    <Box
-      sx={{
-        p: { xs: 2, sm: 4 },
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 4,
-        width: '100%',
-        boxSizing: 'border-box'
-      }}
-    >
-      <Typography
-        variant="h4"
-        gutterBottom
-        textAlign="center"
-      >
-        Profil Utilisateur
-      </Typography>
+    <Container sx={{ py: 4 }}>
+      <Typography variant="h4" gutterBottom>Mon Profil</Typography>
 
-      <Paper
-        sx={{
-          p: { xs: 2, sm: 4 },
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          width: '100%',
-          boxSizing: 'border-box'
-        }}
-        elevation={3}
-      >
-        <Typography variant="h5" gutterBottom textAlign="center">
-          Vos Badges
-        </Typography>
-        {earnedBadges.length === 0 ? (
-          <Typography variant="body1" textAlign="center">
-            Aucun badge gagné pour l'instant.
+      {/* Photo de profil */}
+      <Paper sx={{ p: 3, mb: 4, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+        <Avatar
+          src={profilePhoto}
+          alt="Photo de profil"
+          sx={{ width: 120, height: 120 }}
+        />
+        <label htmlFor="icon-button-file">
+          <input
+            accept="image/*"
+            id="icon-button-file"
+            type="file"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <IconButton color="primary" aria-label="upload picture" component="span">
+            <PhotoCamera />
+          </IconButton>
+        </label>
+        {selectedFile && (
+          <Typography variant="body2">
+            {selectedFile.name}
           </Typography>
-        ) : (
-          <Grid container spacing={2} justifyContent="center">
-            {earnedBadges.map((badge) => (
-              <Grid item key={badge.id}>
-                <Paper
-                  sx={{
-                    p: 2,
-                    textAlign: 'center',
-                    backgroundColor: '#f0f0f0'
-                  }}
-                  elevation={2}
-                >
-                  <Typography variant="body1">{badge.name}</Typography>
-                  {/* Ajoutez une icône ou une image pour chaque badge ici */}
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
         )}
+        <Button
+          variant="contained"
+          onClick={handlePhotoUpload}
+          disabled={!selectedFile || uploading}
+        >
+          {uploading ? <CircularProgress size={24} color="inherit" /> : "Mettre à jour la photo"}
+        </Button>
       </Paper>
-    </Box>
+
+      {/* Badges synchronisés avec Statistiques */}
+      <Typography variant="h5" gutterBottom>Mes Badges</Typography>
+      {badgesEarned.length === 0 ? (
+        <Typography>Aucun badge gagné pour l'instant.</Typography>
+      ) : (
+        <gap-2 container spacing={2}>
+          {badgesEarned.map((badge) => (
+            <Grid2 xs={12} sm={6} md={4} key={badge.id}>
+              <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                  {badge.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {badge.description || 'Description du badge.'}
+                </Typography>
+              </Paper>
+            </Grid2>
+          ))}
+        </gap-2>
+      )}
+    </Container>
   );
 }
 

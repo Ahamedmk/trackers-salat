@@ -1,5 +1,5 @@
 // src/components/AppLayout.js
-import React, { useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 import { AppBar, Toolbar, Typography, Container, Box, Button, IconButton, Drawer, List, ListItem, ListItemText, Divider, ListItemButton } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -70,6 +70,11 @@ function AppLayout({ children }) {
             <ListItem>
             <ListItemButton component={RouterLink} to="/statistics">
               <ListItemText primary="Statistiques" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem>
+            <ListItemButton component={RouterLink} to="/parametres">
+              <ListItemText primary="Parametres" />
               </ListItemButton>
             </ListItem>
             <Divider />

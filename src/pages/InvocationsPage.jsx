@@ -1,339 +1,191 @@
-// src/pages/InvocationsPage.js
-
-import React, { useState, useContext, useEffect } from 'react';
-import { db } from '../firebase';
-import { AuthContext } from '../context/AuthContext';
-import { ref, push, onValue, remove, update } from 'firebase/database';
+import  { useState, useEffect } from 'react';
+import Grid2 from '@mui/material/Grid2'; // Import de Grid2
 import {
-  Typography,
-  Paper,
   Box,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
+  Typography,
+  Container,
   Select,
   MenuItem,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  FormControl,
+  InputLabel,
+  TextField,
+  Button,
+  Paper,
+  IconButton
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+import { ref as dbRef, onValue, push, set, remove } from 'firebase/database';
+import { db } from '../firebase'; // Votre instance Realtime DB
 
 function InvocationsPage() {
-  const { currentUser } = useContext(AuthContext);
-  const [invocationName, setInvocationName] = useState('');
+  // Liste des invocations enregistrées dans ParametresPage (nom, id)
+  const [invocationList, setInvocationList] = useState([]);
+  
+  // Liste des "usages" : (invocation + count + category)
+  const [usageList, setUsageList] = useState([]);
+
+  // Sélection depuis le menu déroulant
+  const [selectedId, setSelectedId] = useState('');
   const [count, setCount] = useState(1);
-  const [category, setCategory] = useState('matin');
-  const [invocations, setInvocations] = useState([]);
+  const [category, setCategory] = useState('Matin');
 
-  const [invocationOptions, setInvocationOptions] = useState([]);
-
-  const [newInvocation, setNewInvocation] = useState('');
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [invocationToDelete, setInvocationToDelete] = useState(null);
-
-  // Filtrer les invocations du jour
-  const filterTodayInvocations = (allInvocations) => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
-    const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
-
-    return allInvocations.filter((inv) => {
-      if (!inv.lastRecitedAt) return false;
-      const recitedTime = typeof inv.lastRecitedAt === 'number' ? inv.lastRecitedAt : Number(inv.lastRecitedAt);
-      return recitedTime >= startOfDay && recitedTime <= endOfDay;
-    });
-  };
-
-  // Récupérer les options d'invocation depuis Firebase
-  const fetchInvocationOptions = () => {
-    if (!currentUser) return;
-    const optionsRef = ref(db, `users/${currentUser.uid}/invocationOptions`);
-    onValue(optionsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const optionsList = Object.entries(data).map(([id, value]) => ({ id, name: value }));
-        setInvocationOptions(optionsList);
-      } else {
-        // Initialiser avec les options prédéfinies si aucune option n'existe
-        const initialInvocationOptions = [
-          'Astaghfirullah',
-          'Allahu Akbar',
-          'SubhanAllah',
-          'Alhamdulillah'
-        ];
-        initialInvocationOptions.forEach((option) => {
-          push(ref(db, `users/${currentUser.uid}/invocationOptions`), option);
-        });
-      }
-    });
-  };
-
-  // Récupérer les invocations depuis Firebase
-  const fetchInvocations = () => {
-    if (!currentUser) return;
-    const invocationsRef = ref(db, `users/${currentUser.uid}/invocations`);
-    onValue(invocationsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const invList = Object.entries(data).map(([id, value]) => ({
-          id,
-          ...value
-        }));
-        const todaysInvocations = filterTodayInvocations(invList);
-        setInvocations(todaysInvocations);
-      } else {
-        setInvocations([]);
-      }
-    });
-  };
-
+  // Charger la liste d'invocations pour le menu (depuis /invocations)
   useEffect(() => {
-    fetchInvocationOptions();
-    fetchInvocations();
-  }, [currentUser]);
-
-  // Ajouter une nouvelle option d'invocation
-  const handleAddInvocationOption = async (e) => {
-    e.preventDefault();
-    if (!currentUser) return;
-    if (!newInvocation.trim()) return;
-
-    // Vérifier si l'invocation existe déjà (case-insensitive)
-    const exists = invocationOptions.some((option) => option.name.toLowerCase() === newInvocation.trim().toLowerCase());
-    if (exists) {
-      alert('Cette invocation existe déjà.');
-      return;
-    }
-
-    const optionsRef = ref(db, `users/${currentUser.uid}/invocationOptions`);
-    await push(optionsRef, newInvocation.trim());
-
-    setNewInvocation('');
-    setAddDialogOpen(false);
-  };
-
-  // Supprimer une option d'invocation
-  const handleDeleteInvocationOption = async () => {
-    if (!currentUser || !invocationToDelete) return;
-
-    const optionsRef = ref(db, `users/${currentUser.uid}/invocationOptions`);
-    // Trouver la clé de l'invocation à supprimer
-    onValue(optionsRef, (snapshot) => {
+    const invRef = dbRef(db, 'invocations');
+    onValue(invRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const entries = Object.entries(data);
-        for (const [key, value] of entries) {
-          if (value === invocationToDelete.name) {
-            remove(ref(db, `users/${currentUser.uid}/invocationOptions/${key}`));
-            break;
-          }
-        }
+        const list = Object.entries(data).map(([id, value]) => ({
+          id,
+          text: value.text || ''
+        }));
+        setInvocationList(list);
+      } else {
+        setInvocationList([]);
       }
-    }, { onlyOnce: true });
+    });
+  }, []);
 
-    setInvocationToDelete(null);
-    setDeleteDialogOpen(false);
+  // Charger la liste d'usage (invocations + count + catégorie) depuis /invocationsUsage
+  useEffect(() => {
+    const usageRef = dbRef(db, 'invocationsUsage');
+    onValue(usageRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.entries(data).map(([uid, val]) => ({
+          uid,
+          text: val.text,
+          count: val.count,
+          category: val.category,
+          createdAt: val.createdAt
+        }));
+        setUsageList(list);
+      } else {
+        setUsageList([]);
+      }
+    });
+  }, []);
+
+  // Quand on change la sélection dans le menu
+  const handleSelectInvocation = (invId) => {
+    setSelectedId(invId);
   };
 
-  // Ajouter une invocation
-  const handleAddInvocation = async (e) => {
-    e.preventDefault();
-    if (!currentUser) return;
+  // Quand on clique sur "Ajouter"
+  const handleAddUsage = () => {
+    if (!selectedId) return;
 
-    if (!invocationName.trim()) {
-      alert('Veuillez sélectionner une invocation.');
-      return;
-    }
+    const found = invocationList.find((inv) => inv.id === selectedId);
+    if (!found) return;
 
-    if (count < 1) {
-      alert('Le nombre de fois doit être au moins 1.');
-      return;
-    }
-
-    const invocationsRef = ref(db, `users/${currentUser.uid}/invocations`);
-    await push(invocationsRef, {
-      name: invocationName.trim(),
-      category,
+    // Créer une nouvelle entrée dans /invocationsUsage
+    const usageRef = dbRef(db, 'invocationsUsage');
+    const newUsageRef = push(usageRef);
+    set(newUsageRef, {
+      text: found.text,      // On stocke le "text" de l'invocation sélectionnée
       count: Number(count),
-      lastRecitedAt: { ".sv": "timestamp" }
+      category,
+      createdAt: Date.now()
     });
 
-    setInvocationName('');
+    // Reset local
+    setSelectedId('');
     setCount(1);
+    setCategory('Matin');
   };
 
-  // Incrémenter le nombre de récitations
-  const handleIncrement = async (inv) => {
-    if (!currentUser) return;
-    const invRef = ref(db, `users/${currentUser.uid}/invocations/${inv.id}`);
-    await update(invRef, {
-      count: inv.count + 1,
-      lastRecitedAt: { ".sv": "timestamp" }
-    });
+  // Supprimer un usage (invocation + count + category)
+  const handleDeleteUsage = (uid) => {
+    const itemRef = dbRef(db, `invocationsUsage/${uid}`);
+    remove(itemRef);
   };
 
-  // Animation framer-motion : paramètres pour l'apparition
-  const itemVariants = {
-    hidden: { opacity: 0, y: -10 },
-    visible: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -10 }
-  };
+  const categoriesPossibles = ['Matin', 'Soir', 'Après-midi', 'Après-prière'];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, p: 2 }}>
-      {/* Section pour gérer les options d'invocation */}
-      <Paper sx={{ p: 4 }} elevation={3}>
-        <Typography variant="h5" gutterBottom>Gérer les Invocations</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Liste des options */}
-          <List>
-            <AnimatePresence>
-              {invocationOptions.map((option) => (
-                <motion.div
-                  key={option.id} // Utiliser l'ID unique de Firebase
-                  variants={itemVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                >
-                  <ListItem
-                    secondaryAction={
-                      <IconButton edge="end" aria-label="delete" onClick={() => { setInvocationToDelete(option); setDeleteDialogOpen(true); }}>
-                        <DeleteIcon />
-                      </IconButton>
-                    }
-                  >
-                    <ListItemText primary={option.name} />
-                  </ListItem>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </List>
+    <Container sx={{ py: 4 }}>
+      <Typography variant="h4" gutterBottom>Invocations</Typography>
+      <Typography variant="body1" sx={{ mb: 2 }}>
+        Sélectionnez une invocation, indiquez le nombre de fois et la catégorie, puis cliquez sur "Ajouter".
+      </Typography>
 
-          {/* Bouton pour ajouter une nouvelle invocation */}
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddDialogOpen(true)}>
-            Ajouter Invocation
-          </Button>
-        </Box>
-      </Paper>
+      {/* Sélection de l'invocation */}
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="invocation-select-label">Sélectionner une Invocation</InputLabel>
+        <Select
+          labelId="invocation-select-label"
+          label="Sélectionner une Invocation"
+          value={selectedId}
+          onChange={(e) => handleSelectInvocation(e.target.value)}
+        >
+          <MenuItem value="">-- Aucune --</MenuItem>
+          {invocationList.map((inv) => (
+            <MenuItem key={inv.id} value={inv.id}>
+              {inv.text}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
-      {/* Dialog pour ajouter une nouvelle invocation */}
-      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)}>
-        <DialogTitle>Ajouter une Nouvelle Invocation</DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handleAddInvocationOption} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Nom de l'invocation"
-              value={newInvocation}
-              onChange={(e) => setNewInvocation(e.target.value)}
-              required
-            />
-            <Button variant="contained" type="submit">Ajouter</Button>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)}>Annuler</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Champs count & category */}
+      <TextField
+        type="number"
+        label="Nombre de fois"
+        value={count}
+        onChange={(e) => setCount(e.target.value)}
+        sx={{ mb: 2 }}
+        fullWidth
+      />
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="category-select-label">Catégorie</InputLabel>
+        <Select
+          labelId="category-select-label"
+          label="Catégorie"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          {categoriesPossibles.map((cat) => (
+            <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
-      {/* Dialog pour confirmer la suppression */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Supprimer Invocation</DialogTitle>
-        <DialogContent>
-          <Typography>Êtes-vous sûr de vouloir supprimer "{invocationToDelete?.name}" de la liste des invocations ?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Annuler</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteInvocationOption}>Supprimer</Button>
-        </DialogActions>
-      </Dialog>
+      <Button variant="contained" onClick={handleAddUsage} disabled={!selectedId}>
+        Ajouter
+      </Button>
 
-      {/* Section pour ajouter une invocation */}
-      <Paper sx={{ p: 4 }} elevation={3}>
-        <Typography variant="h5" gutterBottom>Ajouter une Invocation</Typography>
-        <Box component="form" onSubmit={handleAddInvocation} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400 }}>
-          
-          {/* Sélection de l’invocation */}
-          <FormControl fullWidth>
-            <InputLabel>Invocation</InputLabel>
-            <Select
-              value={invocationName}
-              label="Invocation"
-              onChange={(e) => setInvocationName(e.target.value)}
-              required
-            >
-              {invocationOptions.map((option) => (
-                <MenuItem key={option.id} value={option.name}>{option.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Sélection de la catégorie */}
-          <FormControl fullWidth>
-            <InputLabel>Catégorie</InputLabel>
-            <Select value={category} label="Catégorie" onChange={(e) => setCategory(e.target.value)}>
-              <MenuItem value="matin">Matin</MenuItem>
-              <MenuItem value="soir">Soir</MenuItem>
-              <MenuItem value="après-prière">Après-prière</MenuItem>
-              <MenuItem value="autres">Autres</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Nombre de fois récité */}
-          <TextField
-            type="number"
-            label="Nombre de fois"
-            value={count}
-            onChange={(e) => setCount(e.target.value)}
-            InputProps={{ inputProps: { min: 1 } }}
-            required
-          />
-
-          <Button variant="contained" type="submit" color="primary">Ajouter</Button>
-        </Box>
-      </Paper>
-
-      {/* Section de liste des invocations */}
-      <Paper sx={{ p: 4 }} elevation={3}>
-        <Typography variant="h5" gutterBottom>Liste de vos Invocations</Typography>
-        {invocations.length === 0 ? (
-          <Typography>Aucune invocation enregistrée.</Typography>
+      {/* Liste des usages (invocations + count + category) */}
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6" gutterBottom>Liste des Invocations (avec count & catégorie)</Typography>
+        {usageList.length === 0 ? (
+          <Typography>Aucun usage enregistré.</Typography>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <AnimatePresence>
-              {invocations.map((inv) => (
-                <motion.div
-                  key={inv.id}
-                  variants={itemVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                >
-                  <Paper sx={{ p: 2 }} elevation={1}>
-                    <Typography><strong>Invocation :</strong> {inv.name}</Typography>
-                    <Typography><strong>Catégorie :</strong> {inv.category}</Typography>
-                    <Typography><strong>Nombre de fois :</strong> {inv.count}</Typography>
-                    {inv.lastRecitedAt && <Typography><strong>Dernière récitation :</strong> {new Date(inv.lastRecitedAt).toLocaleString()}</Typography>}
-                    <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                      <Button variant="outlined" onClick={() => handleIncrement(inv)}>+1</Button>
-                    </Box>
-                  </Paper>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </Box>
+          <Grid2 container spacing={2}>
+            {usageList.map((usage) => (
+              <Grid2 xs={12} sm={6} md={4} key={usage.uid}>
+                <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                    {usage.text}
+                  </Typography>
+                  <Typography variant="body2">
+                    Catégorie : {usage.category}
+                  </Typography>
+                  <Typography variant="body2">
+                    Nombre de fois : {usage.count}
+                  </Typography>
+                  <Box sx={{ textAlign: 'right' }}>
+                    <IconButton color="error" onClick={() => handleDeleteUsage(usage.uid)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Paper>
+              </Grid2>
+            ))}
+          </Grid2>
         )}
-      </Paper>
-    </Box>
+      </Box>
+    </Container>
   );
 }
 

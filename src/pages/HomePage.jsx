@@ -2,6 +2,7 @@
 import { useContext } from 'react';
 import { Box, Typography, Button, Paper, Card, CardContent, CardActions } from '@mui/material';
 import Grid from '@mui/material/Grid'; // On utilise le Grid stable
+import Grid2 from '@mui/material/Grid2'; // Import de Grid2
 import { Link as RouterLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
@@ -93,8 +94,8 @@ function HomePage() {
           Découvrez comment cette application peut vous aider au quotidien.
         </Typography>
 
-        <Grid container spacing={3} justifyContent="center">
-          <Grid item xs={12} md={4}>
+        <Grid2 container spacing={3} justifyContent="center">
+          <Grid2 xs={12} md={4}>
             <Card elevation={3} sx={{ height: '100%' }}>
               <CardContent sx={{ textAlign: 'center' }}>
                 <AutoAwesomeIcon color="primary" sx={{ fontSize: 50, mb: 2 }} />
@@ -107,9 +108,9 @@ function HomePage() {
                 <Button component={RouterLink} to="/prayers" variant="outlined" color="primary">En savoir plus</Button>
               </CardActions>
             </Card>
-          </Grid>
+          </Grid2>
 
-          <Grid item xs={12} md={4}>
+          <Grid2 xs={12} md={4}>
             <Card elevation={3} sx={{ height: '100%' }}>
               <CardContent sx={{ textAlign: 'center' }}>
                 <ChatIcon color="primary" sx={{ fontSize: 50, mb: 2 }} />
@@ -122,9 +123,9 @@ function HomePage() {
                 <Button component={RouterLink} to="/invocations" variant="outlined" color="primary">En savoir plus</Button>
               </CardActions>
             </Card>
-          </Grid>
+          </Grid2>
 
-          <Grid item xs={12} md={4}>
+          <Grid2 xs={12} md={4}>
             <Card elevation={3} sx={{ height: '100%' }}>
               <CardContent sx={{ textAlign: 'center' }}>
                 <AssessmentIcon color="primary" sx={{ fontSize: 50, mb: 2 }} />
@@ -137,8 +138,8 @@ function HomePage() {
                 <Button component={RouterLink} to="/statistics" variant="outlined" color="primary">En savoir plus</Button>
               </CardActions>
             </Card>
-          </Grid>
-        </Grid>
+          </Grid2>
+        </Grid2>
       </Box>
     </Box>
   );

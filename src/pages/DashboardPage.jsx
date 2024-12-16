@@ -1,7 +1,8 @@
 // src/pages/DashboardPage.js
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Typography, Paper, Box, Grid, Card, CardContent, CardActions, Button } from '@mui/material';
+import Grid2 from '@mui/material/Grid2'; // Import de Grid2
+import { Typography, Paper, Box, Card, CardContent, CardActions, Button } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 // Import des icônes
@@ -30,8 +31,8 @@ function DashboardPage() {
         </Typography>
       </Paper>
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={4}>
+      <Grid2 container spacing={2}>
+        <Grid2 xs={12} md={4}>
           <Card elevation={3}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -46,9 +47,9 @@ function DashboardPage() {
               <Button component={RouterLink} to="/prayers" variant="contained" color="primary">Accéder aux Prières</Button>
             </CardActions>
           </Card>
-        </Grid>
+        </Grid2>
 
-        <Grid item xs={12} md={4}>
+        <Grid2 xs={12} md={4}>
           <Card elevation={3}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -63,9 +64,9 @@ function DashboardPage() {
               <Button component={RouterLink} to="/invocations" variant="contained" color="primary">Accéder aux Invocations</Button>
             </CardActions>
           </Card>
-        </Grid>
+        </Grid2>
 
-        <Grid item xs={12} md={4}>
+        <Grid2 xs={12} md={4}>
           <Card elevation={3}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -80,8 +81,8 @@ function DashboardPage() {
               <Button component={RouterLink} to="/statistics" variant="contained" color="primary">Voir les Statistiques</Button>
             </CardActions>
           </Card>
-        </Grid>
-      </Grid>
+        </Grid2>
+      </Grid2>
     </Box>
   );
 }
