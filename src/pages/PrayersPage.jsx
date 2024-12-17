@@ -1,5 +1,3 @@
-// src/pages/PrayersPage.js
-
 import React, { useState, useContext, useEffect } from 'react';
 import { db } from '../firebase';
 import { AuthContext } from '../context/AuthContext';
@@ -22,8 +20,8 @@ import {
   DialogContent
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactConfetti from 'react-confetti';
 
-// Tableau de messages d’encouragement
 const encouragementMessages = [
   "Bravo ! Continue ainsi !",
   "Excellente régularité, machaAllah !",
@@ -43,10 +41,7 @@ function PrayersPage() {
   const [onTimeStatus, setOnTimeStatus] = useState('on-time');
   const [prayers, setPrayers] = useState([]);
 
-  // États pour le pop-up "déjà validé"
   const [alreadyValidatedOpen, setAlreadyValidatedOpen] = useState(false);
-
-  // États pour la modification d'une prière
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [prayerToEdit, setPrayerToEdit] = useState(null);
   const [editPrayerType, setEditPrayerType] = useState('Fajr');
@@ -54,17 +49,36 @@ function PrayersPage() {
   const [editNote, setEditNote] = useState('');
   const [editOnTimeStatus, setEditOnTimeStatus] = useState('on-time');
 
-  // États pour le Snackbar
+  // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
-  // Filtre pour obtenir uniquement les prières du jour
+  // Modal de félicitations pour les 5 prières validées
+  const [showCongratsModal, setShowCongratsModal] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  useEffect(() => {
+    fetchPrayers();
+  }, [currentUser]);
+
+  useEffect(() => {
+    const requiredTypes = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+    const typesToday = prayers.map((p) => p.type);
+    const allDone = requiredTypes.every((type) => typesToday.includes(type));
+    if (allDone && prayers.length >= 5) {
+      setShowCongratsModal(true);
+      setShowConfetti(true);
+    } else {
+      setShowCongratsModal(false);
+      setShowConfetti(false);
+    }
+  }, [prayers]);
+
   const filterTodayPrayers = (allPrayers) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
-
     return allPrayers.filter((p) => {
       if (!p.date) return false;
       const prayerTime = typeof p.date === 'number' ? p.date : Number(p.date);
@@ -78,10 +92,7 @@ function PrayersPage() {
     onValue(prayersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const allPrayers = Object.entries(data).map(([id, value]) => ({
-          id,
-          ...value
-        }));
+        const allPrayers = Object.entries(data).map(([id, value]) => ({ id, ...value }));
         const todaysPrayers = filterTodayPrayers(allPrayers);
         setPrayers(todaysPrayers);
       } else {
@@ -90,17 +101,11 @@ function PrayersPage() {
     });
   };
 
-  useEffect(() => {
-    fetchPrayers();
-  }, [currentUser]);
-
   const handleAddPrayer = async (e) => {
     e.preventDefault();
     if (!currentUser) return;
 
-    // Vérifier si une prière du même type existe déjà aujourd'hui
     const alreadyExists = prayers.some((p) => p.type === prayerType);
-
     if (alreadyExists) {
       setAlreadyValidatedOpen(true);
       return;
@@ -114,15 +119,13 @@ function PrayersPage() {
       onTimeStatus,
       date: { ".sv": "timestamp" }
     });
-
     setNote('');
 
-    // Si en retard => message d’avertissement
+    // Gérer le message
     if (onTimeStatus === 'late') {
       setSnackbarMessage("Tu es en retard, fais attention la prochaine fois !");
       setSnackbarSeverity("warning");
     } else {
-      // message d’encouragement aléatoire
       const randomIndex = Math.floor(Math.random() * encouragementMessages.length);
       setSnackbarMessage(encouragementMessages[randomIndex]);
       setSnackbarSeverity("success");
@@ -134,7 +137,6 @@ function PrayersPage() {
     setAlreadyValidatedOpen(false);
   };
 
-  // Fermer le Snackbar
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
@@ -172,11 +174,15 @@ function PrayersPage() {
     setPrayerToEdit(null);
   };
 
-  // Animation framer-motion : paramètres pour l'apparition
   const itemVariants = {
     initial: { opacity: 0, y: -10 },
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -10 }
+  };
+
+  const handleCloseCongratsModal = () => {
+    setShowCongratsModal(false);
+    setShowConfetti(false);
   };
 
   return (
@@ -229,7 +235,7 @@ function PrayersPage() {
       <Paper sx={{ p: 4 }} elevation={3}>
         <Typography variant="h5" gutterBottom>Prières d'aujourd'hui</Typography>
         {prayers.length === 0 ? (
-          <Typography variant="body1">Aucune prière enregistrée pour aujourd'hui.</Typography>
+          <Typography>Aucune prière enregistrée pour aujourd'hui.</Typography>
         ) : (
           <AnimatePresence>
             {prayers.map((p) => (
@@ -268,7 +274,7 @@ function PrayersPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog pour modifier une prière */}
+      {/* Dialog de modification */}
       <Dialog open={editDialogOpen} onClose={handleEditPrayerClose}>
         <DialogTitle>Modifier la Prière</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
@@ -312,23 +318,67 @@ function PrayersPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar (au milieu de l'écran) */}
+      {/* Snackbar encouragement / avertissement */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={4000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        sx={{ top: '40%!important' }} // Descendre la snackbar ~ au milieu
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} // MUI ne supporte pas 'center', => warning
       >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-        >
+        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      {/* Modal de félicitations sans slide */}
+      <CongratsModal prayers={prayers} />
     </Box>
+  );
+}
+
+function CongratsModal({ prayers }) {
+  const [open, setOpen] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  useEffect(() => {
+    const requiredTypes = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+    const typesToday = prayers.map((p) => p.type);
+    const allDone = requiredTypes.every((type) => typesToday.includes(type));
+    if (allDone && prayers.length >= 5) {
+      setOpen(true);
+      setShowConfetti(true);
+    } else {
+      setOpen(false);
+      setShowConfetti(false);
+    }
+  }, [prayers]);
+
+  const handleClose = () => {
+    setOpen(false);
+    setShowConfetti(false);
+  };
+
+  return (
+    <>
+      {showConfetti && <ReactConfetti />}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        sx={{ textAlign: 'center' }}
+      >
+        <DialogTitle>Félicitations !</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Tu as accompli les 5 prières aujourd’hui. Continue ainsi, machaAllah !
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} variant="contained">
+            Merci !
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 
