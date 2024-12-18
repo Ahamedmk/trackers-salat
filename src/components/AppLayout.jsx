@@ -104,7 +104,7 @@ function AppLayout({ children }) {
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width:'100vw' }}>
       <AppBar position="static">
         <Toolbar>
           {/* Bouton menu burger */}
