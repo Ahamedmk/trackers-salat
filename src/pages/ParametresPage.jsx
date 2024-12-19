@@ -1,6 +1,6 @@
 // src/pages/ParametresPage.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
   Typography,
@@ -8,17 +8,31 @@ import {
   Button,
   Paper,
   Container,
-  Grid,
-  IconButton
+  IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import Grid2 from '@mui/material/Grid2'; // Import de Grid2
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ref as dbRef, push, set, onValue, remove } from 'firebase/database';
 import { db } from '../firebase'; // Votre instance Realtime DB
+import { ThemeContext } from '../context/ThemeContext'; // Import du contexte du thème
+
+// Quelques couleurs proposées
+const colorOptions = [
+  { label: 'Vert Pastel', value: '#F2FFF2' },
+  { label: 'Beige', value: '#FFF8E1' },
+  { label: 'Bleu Clair', value: '#E1F5FE' },
+  { label: 'Rose très clair', value: '#FCE4EC' }
+];
 
 function ParametresPage() {
   const [invocationText, setInvocationText] = useState('');
   const [invocationList, setInvocationList] = useState([]);
+
+  const { backgroundColor, setBackgroundColor } = useContext(ThemeContext);
 
   useEffect(() => {
     // Charger la liste des invocations
@@ -55,6 +69,10 @@ function ParametresPage() {
     // Supprimer l’invocation dans la DB
     const itemRef = dbRef(db, `invocations/${id}`);
     remove(itemRef);
+  };
+
+  const handleChangeColor = (e) => {
+    setBackgroundColor(e.target.value);
   };
 
   return (
@@ -100,6 +118,25 @@ function ParametresPage() {
           ))}
         </Grid2>
       )}
+
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6" gutterBottom>Couleur de fond</Typography>
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          Choisissez une couleur de fond pour l'application :
+        </Typography>
+        <FormControl fullWidth sx={{ maxWidth: 300 }}>
+          <InputLabel>Couleur de fond</InputLabel>
+          <Select
+            value={backgroundColor}
+            label="Couleur de fond"
+            onChange={handleChangeColor}
+          >
+            {colorOptions.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
     </Container>
   );
 }
